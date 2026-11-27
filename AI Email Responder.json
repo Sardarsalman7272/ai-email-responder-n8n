@@ -1,0 +1,220 @@
+{
+  "name": "AI Email Responder",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "76979021-272d-4bcd-8170-15e9fab54fe7",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "pJIBWpDhs7l6sdw4",
+          "name": "Gmail account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a polite customer support assistant for a small business.\n\nBUSINESS INFO (only use these facts):\n- Business name: Your Shop Name\n- Delivery: 3-5 working days across Pakistan\n- Payment: Cash on delivery and bank transfer\n- Returns: 7 days, unused items only\n\nRULES:\n- Only use the facts above. If the customer asks something not covered, say you will check and get back to them. Never invent prices, times or policies.\n- Keep the reply short and friendly.\n- Write only the email body. Do not include a subject line.\n- Only mention facts that are relevant to what the customer asked. Do not list policies they did not ask about.\n- Write as \"we\", speaking for the business, never \"I\".\n\nCustomer email: {{ $json.snippet }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        608,
+        0
+      ],
+      "id": "c943e405-4b4f-4687-aed3-9db43dfb5168",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        544,
+        208
+      ],
+      "id": "70b7cf8c-cb3f-4828-a193-5aeddb345b65",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "vRJ1eq7zpomTfHWV",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "=Re: {{ $('Gmail Trigger').item.json.Subject }}",
+        "message": "={{ $json.text }}",
+        "options": {
+          "sendTo": "={{ $('Gmail Trigger').item.json.From }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        976,
+        0
+      ],
+      "id": "ccb71575-e2ac-41fd-9c85-ae0381e8b5a6",
+      "name": "Create a draft",
+      "webhookId": "a8d4c88b-add3-46c8-85d2-065aa9df91d0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "pJIBWpDhs7l6sdw4",
+          "name": "Gmail account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputText": "={{ $json.snippet }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "Inquiry",
+              "description": "A customer asking about products, prices, delivery, orders or availability."
+            },
+            {
+              "category": "Other",
+              "description": "Everything else: spam, newsletters, notifications, personal emails."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "76ad8b91-09b3-4147-a5fa-32a298c676f0",
+      "name": "Text Classifier"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        160,
+        208
+      ],
+      "id": "fdf7b3f0-2572-46aa-9ea5-724b962a9b95",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "vRJ1eq7zpomTfHWV",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Edit your business info in the BUSINESS INFO section of the Basic LLM Chain prompt. Connect your own Gmail and Gemini accounts"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        288,
+        288
+      ],
+      "id": "0b3b5632-9395-4d3d-8dd3-9058f4cb89b9",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Create a draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Classifier": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "f3ef67e6-cf07-4867-b298-fbb06a12875b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "56f3784768b39330b56c4a07ddbd2a432465da65b0d5308c07d37dc739db1ea1"
+  },
+  "nodeGroups": [],
+  "id": "FVQfiL7GOqXRhFo0",
+  "tags": []
+}
